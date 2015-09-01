@@ -1,9 +1,24 @@
 module.exports = function(grunt) {
 
+
+  // Set path variables for the files we want to include in the build
+  var appConfigVars = {
+    bowerSource: 'third_party/bower_components',
+    thirdPartyJs: 'third_party/js',
+    source: 'js',
+    templates: 'templates',
+    css: 'static/css',
+    py: 'src',
+  };
+
   // The target directory for the final build product.
   var targetDirectory = 'out';
 
   grunt.initConfig({
+
+    //calling appConfigVars set above
+    appConfig: appConfigVars,
+
     appengine: {
       app: {
         root: targetDirectory,
@@ -94,10 +109,48 @@ module.exports = function(grunt) {
         src: '**'
       }
     },
+
+    /**
+     * Poll for changes in html, css, js, tpl, and py  files
+     */
+    watch: {
+      scripts: {
+        files: [
+          '<%= appConfig.source %>/**/*.js',
+          '<%= appConfig.thirdPartyJs %>/**/*.js',
+          '!<%= appConfig.source %>/build/*'
+        ],
+        tasks: ['js']
+      },
+      html: {
+        files: [
+          '<%= appConfig.templates %>/**/*.html',
+          '<%= appConfig.templates %>/**/*.tpl'
+        ],
+        tasks: ['html']
+      },
+      css: {
+        files: [
+          '<%= appConfig.css %>/**/*.css'
+        ],
+        tasks:['css']
+      },
+      py: {
+        files: [
+          '<%= appConfig.py %>/**/*.py'
+        ],
+        tasks: ['py']
+      },
+      sass: {
+        files: ['**/*.{scss,sass}'],
+        tasks: ['compass:dev']
+      }
+    },
   });
 
   grunt.loadNpmTasks('grunt-appengine');
   grunt.loadNpmTasks('grunt-contrib-clean');
+  grunt.loadNpmTasks('grunt-contrib-watch');
   grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-closure-soy');
   grunt.loadNpmTasks('grunt-closure-tools');
@@ -148,8 +201,27 @@ module.exports = function(grunt) {
         grunt.util.spawn({cmd: 'git', args: ['status']}, statusCallback);
         });
 
+  grunt.registerTask('js', [
+    'concat',
+    'uglify',
+    'copy:js'
+  ]);
+
+  grunt.registerTask('css', [
+    'copy:static'
+  ]);
+
+  grunt.registerTask('html', [
+    'copy:templates'
+  ]);
+
+  grunt.registerTask('py', [
+    'copy:source',
+    'copy:third_party_py'
+  ]);
+
   grunt.registerTask('default',
-      ['copy:source', 'copy:static', 'copy:templates',
+      ['yaml', 'copy:source', 'copy:static', 'copy:templates',
        'copy:third_party_js', 'copy:third_party_py',
       grunt.config.get('build.use_closure_templates') ? 'closureSoys' : 'nop',
       grunt.config.get('build.use_closure_templates') ? 'copy:soyutils' : 'nop',
