@@ -49,7 +49,7 @@ module.exports = function(grunt) {
         namespaces: 'app',
       },
       js: {
-        src: [ 'closure-library', 'js' ],
+        src: [ 'js', 'closure-library' ],
         dest: [ targetDirectory, 'static', 'app.js'].join('/'),
       }
     },
@@ -125,7 +125,8 @@ module.exports = function(grunt) {
       html: {
         files: [
           '<%= appConfig.templates %>/**/*.html',
-          '<%= appConfig.templates %>/**/*.tpl'
+          '<%= appConfig.templates %>/**/*.tpl',
+          'static/*.html'
         ],
         tasks: ['html']
       },
@@ -202,9 +203,8 @@ module.exports = function(grunt) {
         });
 
   grunt.registerTask('js', [
-    'concat',
-    'uglify',
-    'copy:js'
+    grunt.config.get('build.use_closure') ? 'closureBuilder' : 'nop',
+      'yaml'
   ]);
 
   grunt.registerTask('css', [
@@ -212,7 +212,8 @@ module.exports = function(grunt) {
   ]);
 
   grunt.registerTask('html', [
-    'copy:templates'
+    'copy:templates',
+    'copy:static'
   ]);
 
   grunt.registerTask('py', [
