@@ -1,6 +1,6 @@
 {
   "appid": "scaffold",
-  "use_closure": true,
-  "use_closure_templates": true
+  "use_closure": false,
+  "use_closure_templates": false
 }
 

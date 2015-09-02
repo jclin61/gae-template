@@ -36,40 +36,34 @@ module.exports = function(grunt) {
 
     clean: [targetDirectory],
 
-    closureBuilder: {
-      options: {
-        closureLibraryPath: 'closure-library',
-        compile: true,
-        compilerFile: [process.env.HOME,
-                      'bin', 'google_closure', 'compiler.jar'].join('/'),
-        compilerOpts: {
-          compilation_level: grunt.option('dev', false) ?
-            'SIMPLE_OPTIMIZATIONS' : 'ADVANCED_OPTIMIZATIONS'
-        },
-        namespaces: 'app',
-      },
-      js: {
-        src: [ 'closure-library', 'js' ],
-        dest: [ targetDirectory, 'static', 'app.js'].join('/'),
-      }
+     concat: {
+        dist: {
+            files: [
+                {
+                    dest: '<%= appConfig.source %>/build/vendor.js',
+                    src: [
+                        '<%= appConfig.bowerSource %>/jquery/dist/jquery.js',
+                        '<%= appConfig.bowerSource %>/angular/angular.js',
+                        '<%= appConfig.bowerSource %>/angular-cache/dist/angular-cache.js',
+                        '<%= appConfig.bowerSource %>/angular-animate/angular-animate.js',
+                        '<%= appConfig.thirdPartyJs %>/mm-foundation-tpls.js',
+                    ]
+                },
+                {
+                    dest: '<%= appConfig.source %>/build/scripts.js',
+                    src: [
+                        '<%= appConfig.source %>/*.js',
+                        '<%= appConfig.source %>/app.js',
+                        '<%= appConfig.source %>/controllers/{,*/}*.js',
+                        '<%= appConfig.source %>/directives/{,*/}*.js',
+                        '<%= appConfig.source %>/filters/{,*/}*.js',
+                        '<%= appConfig.source %>/services/{,*/}*.js'
+                    ]
+                }
+            ]
+        }
     },
 
-    closureSoys: {
-      all: {
-        src: ['templates', 'soy', '**', '*.soy'].join('/'),
-        soyToJsJarPath: [process.env.HOME, 'bin', 'google_closure_templates',
-                         'SoyToJsSrcCompiler.jar'].join('/'),
-        outputPathFormat: [targetDirectory, 'static', 'app.soy.js'].join('/'),
-        options: {
-          allowExternalCalls: false,
-          shouldGenerateJsdoc: true,
-          // Set to 'true' if adding the compiled Closure Templates to the
-          // sources that will be minified by the Closure Compiler so that
-          // goog.provide and goog.require statements are added.
-          shouldProvideRequireSoyNamespaces: false
-        }
-      }
-    },
 
     copy: {
       source: {
@@ -78,11 +72,11 @@ module.exports = function(grunt) {
         expand: true,
         src: '**'
       },
-      soyutils: {
-        cwd: [process.env.HOME, 'bin', 'google_closure_templates'].join('/'),
-        dest: [targetDirectory, 'static', ''].join('/'),
+      js: {
+        cwd: ['js', 'build', ''].join('/'),
+        dest: [targetDirectory, 'static', 'js', ''].join('/'),
         expand: true,
-        src: 'soyutils.js'
+        src: '**'
       },
       static: {
         cwd: 'static',
@@ -110,6 +104,15 @@ module.exports = function(grunt) {
       }
     },
 
+    uglify: {
+          dist: {
+              files: [
+                  {dest: '<%= appConfig.source %>/build/vendor.min.js', src: ['<%= appConfig.source %>/build/vendor.js']},
+                  {dest: '<%= appConfig.source %>/build/scripts.min.js', src: ['<%= appConfig.source %>/build/scripts.js']}
+              ]
+          }
+      },
+
     /**
      * Poll for changes in html, css, js, tpl, and py  files
      */
@@ -125,7 +128,9 @@ module.exports = function(grunt) {
       html: {
         files: [
           '<%= appConfig.templates %>/**/*.html',
-          '<%= appConfig.templates %>/**/*.tpl'
+          '<%= appConfig.templates %>/**/*.tpl',
+          'static/*.html'
+
         ],
         tasks: ['html']
       },
@@ -151,6 +156,8 @@ module.exports = function(grunt) {
   grunt.loadNpmTasks('grunt-appengine');
   grunt.loadNpmTasks('grunt-contrib-clean');
   grunt.loadNpmTasks('grunt-contrib-watch');
+  grunt.loadNpmTasks('grunt-contrib-concat');
+  grunt.loadNpmTasks('grunt-contrib-uglify');
   grunt.loadNpmTasks('grunt-contrib-copy');
   grunt.loadNpmTasks('grunt-closure-soy');
   grunt.loadNpmTasks('grunt-closure-tools');
@@ -204,7 +211,8 @@ module.exports = function(grunt) {
   grunt.registerTask('js', [
     'concat',
     'uglify',
-    'copy:js'
+    'copy:js',
+    'copy:third_party_js'
   ]);
 
   grunt.registerTask('css', [
@@ -212,7 +220,8 @@ module.exports = function(grunt) {
   ]);
 
   grunt.registerTask('html', [
-    'copy:templates'
+    'copy:templates',
+    'copy:static'
   ]);
 
   grunt.registerTask('py', [
@@ -221,7 +230,7 @@ module.exports = function(grunt) {
   ]);
 
   grunt.registerTask('default',
-      ['yaml', 'copy:source', 'copy:static', 'copy:templates',
+      ['yaml', 'concat', 'uglify', 'copy:js', 'copy:source', 'copy:static', 'copy:templates',
        'copy:third_party_js', 'copy:third_party_py',
       grunt.config.get('build.use_closure_templates') ? 'closureSoys' : 'nop',
       grunt.config.get('build.use_closure_templates') ? 'copy:soyutils' : 'nop',
